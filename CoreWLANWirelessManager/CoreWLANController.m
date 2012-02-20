@@ -262,6 +262,59 @@
 	
 	self.scanResults = [NSMutableArray arrayWithArray:[self.currentInterface scanForNetworksWithParameters:params error:&err]];
     
+    //BEGIN HACK - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    
+    int count;
+    count = [self.scanResults count];
+    
+    //initializing array "dFlags" length of scanResults as string "keep"
+    NSMutableArray *dFlags = [[NSMutableArray alloc] init];
+    for (int x = 0; x < count; x++){
+        [dFlags addObject:@"keep"];
+    }
+    
+    //these variables are used to parse string of wifi info down to ssid
+    NSMutableString *variable = nil;
+    NSRange openBracket;
+    NSRange closeBracket;
+    NSRange numberRange;
+    NSString *numberString = nil;
+    
+    //indexes will mark networks to be deleted from scanResults
+    NSMutableIndexSet *indexes = [[NSMutableIndexSet alloc] init];
+    
+    for (int i = 0; i < count; i++){
+        
+        //the entire string of wifi info before parsing
+        variable = [self.scanResults objectAtIndex: i];
+        NSString *network = [NSString stringWithFormat:@"%@", variable];
+        openBracket = [network rangeOfString:@"ssid"];
+        closeBracket = [network rangeOfString:@"-"];
+        numberRange = NSMakeRange(openBracket.location + 5, closeBracket.location - openBracket.location - 5);
+        numberString = [network substringWithRange:numberRange];
+        
+        //testing the ssid after the wifi info has been parsed
+        if( [numberString isEqualToString:@"thermostat"] ){
+            NSLog (@"y %@", numberString);
+        }
+        else {
+            NSLog (@"n %@", numberString);
+            
+            //flag to be deleted if the ssid is not "thermostat"
+            [dFlags replaceObjectAtIndex:i withObject:@"remove"];
+            [indexes addIndex : i];
+        }
+    }
+    
+    //removing networks with ssid not equal to "themostat"
+    [self.scanResults removeObjectsAtIndexes:indexes];
+    
+    //freeing memory
+    [dFlags release];
+    [indexes release];
+    
+    //END HACK - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -    
+    
     if( err )
 		[[NSAlert alertWithError:err] runModal];
 	else
